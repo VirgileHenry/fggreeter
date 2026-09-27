@@ -3,8 +3,10 @@ use bevy::prelude::*;
 #[derive(States)]
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub enum GreeterState {
-    /// Both fighters in stance, each keystroke = an attack.
+    /// Very first state, mostly here to properly enter combat
     #[default]
+    Init,
+    /// Both fighters in stance, each keystroke = an attack.
     Combat,
     /// Answer sent, charging up until greetd replies.
     Windup,
@@ -61,6 +63,11 @@ pub struct StateParam<'w> {
 
 fn advance(transition: On<GreeterTransition>, mut state: StateParam, mut commands: Commands) {
     match (state.state.get(), &*transition) {
+        (GreeterState::Init, GreeterTransition::SubmitAnswer) => {
+            /* Move from Combat to Windup, submitting an answer */
+            commands.trigger(crate::engine::animation::AnimationEvent::Windup);
+            state.next_state.set(GreeterState::Windup);
+        }
         (GreeterState::Combat, GreeterTransition::SubmitAnswer) => {
             /* Move from Combat to Windup, submitting an answer */
             commands.trigger(crate::engine::animation::AnimationEvent::Windup);
@@ -90,8 +97,6 @@ fn advance(transition: On<GreeterTransition>, mut state: StateParam, mut command
             commands.trigger(crate::engine::animation::AnimationEvent::Counter);
             state.next_state.set(GreeterState::Countered);
         }
-        (GreeterState::Combat, GreeterTransition::BackToCombat) => { /* Happens at startup, is fine */ }
-        (GreeterState::FinisherDone, GreeterTransition::LoginSuccess) => { /* Happens at end, is fine */ }
         (state, transition) => tracing::warn!("Unhandled transition: {state:?} -> {transition:?}"),
     }
 }

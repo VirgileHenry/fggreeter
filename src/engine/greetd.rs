@@ -60,9 +60,7 @@ fn start_pam_session(channel: NonSend<GreetdChannel>, input_state: Res<crate::en
     let request = greetd_ipc::Request::CreateSession {
         username: input_state.user.clone(),
     };
-    if let Err(_) = channel.sender.send(request) {
-        tracing::error!("Engine -> SockThread channel closed, can't send requests !");
-    }
+    log_err(channel.sender.send(request));
 }
 
 /// System to handle responses from the greetd socket
@@ -85,18 +83,27 @@ fn handle_greetd_response(
                 greetd_ipc::AuthMessageType::Secret => false,
                 greetd_ipc::AuthMessageType::Visible => true,
                 /* Fixme: switch to a display err / info state, in that state respond with none and wait, then back to combat */
-                greetd_ipc::AuthMessageType::Info => todo!("show info, respond with None"),
-                greetd_ipc::AuthMessageType::Error => todo!("show error, respond with None"),
+                greetd_ipc::AuthMessageType::Info => {
+                    tracing::info!("Info from greetd: {auth_message}");
+                    /* Send a non response to keep the convo with greetd going */
+                    let request = greetd_ipc::Request::PostAuthMessageResponse { response: None };
+                    log_err(channel.sender.send(request));
+                    return; /* Don't do the input cleanup + transition */
+                }
+                greetd_ipc::AuthMessageType::Error => {
+                    tracing::warn!("Error from greetd: {auth_message}");
+                    /* Send a non response to keep the convo with greetd going */
+                    let request = greetd_ipc::Request::PostAuthMessageResponse { response: None };
+                    log_err(channel.sender.send(request));
+                    return; /* Don't do the input cleanup + transition */
+                }
             };
             input_state.response_buffer.clear();
             input_label.0 = auth_message;
             /* Tell the state manager to go back to combat */
             commands.trigger(crate::engine::state::GreeterTransition::BackToCombat);
         }
-        Ok(greetd_ipc::Response::Error {
-            error_type,
-            description: _,
-        }) => match error_type {
+        Ok(greetd_ipc::Response::Error { error_type, description }) => match error_type {
             greetd_ipc::ErrorType::AuthError => {
                 input_state.response_buffer.clear();
                 input_label.0 = format!("Invalid credentials !");
@@ -104,11 +111,15 @@ fn handle_greetd_response(
                 let request = greetd_ipc::Request::CreateSession {
                     username: input_state.user.clone(),
                 };
-                if let Err(_) = channel.sender.send(request) {
-                    tracing::error!("Engine -> SockThread channel closed, can't send requests !");
-                }
+                log_err(channel.sender.send(request));
             }
-            greetd_ipc::ErrorType::Error => todo!("show error, respond with None"),
+            greetd_ipc::ErrorType::Error => {
+                tracing::warn!("Error from greetd: {description}");
+                /* Send a non response to keep the convo with greetd going */
+                let request = greetd_ipc::Request::PostAuthMessageResponse { response: None };
+                log_err(channel.sender.send(request));
+                return; /* Don't do the input cleanup + transition */
+            }
         },
         Ok(greetd_ipc::Response::Success) => commands.trigger(crate::engine::state::GreeterTransition::LoginSuccess),
     }
@@ -137,5 +148,13 @@ fn start_session(channel: NonSend<GreetdChannel>, input_state: Res<crate::engine
     match channel.sender.send(request) {
         Ok(_) => { /* All good */ }
         Err(_) => tracing::error!("Engine -> SockThread channel closed, can't send requests !"),
+    }
+}
+
+/// Small utility to log errors from sending
+/// to channels that are no longer available
+fn log_err(err: Result<(), std::sync::mpsc::SendError<greetd_ipc::Request>>) {
+    if let Err(req) = err {
+        tracing::error!("Engine -> SockThread channel closed, can't send request: {req:?}");
     }
 }
