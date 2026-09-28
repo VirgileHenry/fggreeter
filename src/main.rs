@@ -2,18 +2,10 @@ mod args;
 mod engine;
 
 fn main() {
-    #[cfg(debug_assertions)]
-    let fggreeter_log_level = "debug";
-    #[cfg(not(debug_assertions))]
-    let fggreeter_log_level = "info";
-    let bevy_log_filters = bevy::log::DEFAULT_FILTER;
-    /* Initialize a global tracing subscriber based on the RUST_LOG env var */
-    let filter = format!("info,fggreeter={fggreeter_log_level},{bevy_log_filters}");
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::new(filter))
-        .init();
-
     let args: args::Args = argh::from_env();
+
+    init_logging(args.log_file.as_ref());
+
     tracing::info!("Running greeter for user {}", args.user);
 
     let Ok(socket_path) = std::env::var("GREETD_SOCK") else {
@@ -28,4 +20,24 @@ fn main() {
 
     let mut app = engine::create(args, socket);
     app.run();
+}
+
+fn init_logging(log_file: Option<&std::path::PathBuf>) {
+    use tracing_subscriber::fmt::writer::MakeWriterExt;
+
+    #[cfg(debug_assertions)]
+    let fggreeter_log_level = "debug";
+    #[cfg(not(debug_assertions))]
+    let fggreeter_log_level = "info";
+
+    let bevy_log_filters = bevy::log::DEFAULT_FILTER;
+
+    /* Initialize a global tracing subscriber based on the RUST_LOG env var */
+    let filter = format!("info,fggreeter={fggreeter_log_level},{bevy_log_filters}");
+    let builder = tracing_subscriber::fmt().with_env_filter(tracing_subscriber::EnvFilter::new(filter));
+
+    match log_file.and_then(|p| std::fs::OpenOptions::new().create(true).append(true).open(p).ok()) {
+        Some(file) => builder.with_writer(std::io::stderr.and(std::sync::Mutex::new(file))).init(),
+        None => builder.init(),
+    }
 }

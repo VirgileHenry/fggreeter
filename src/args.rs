@@ -7,4 +7,7 @@ pub struct Args {
     /// command to execute after the greeter started.
     #[argh(option)]
     pub command: Vec<String>,
+    /// file to send the logs to
+    #[argh(option)]
+    pub log_file: Option<std::path::PathBuf>,
 }
