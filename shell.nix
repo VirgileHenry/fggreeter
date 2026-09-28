@@ -31,4 +31,5 @@ pkgs.mkShell {
   ];
   buildInputs = libs;
   LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath libs;
+  UST_LOG="bevy_asset=debug,info";
 }

@@ -22,8 +22,6 @@ pub fn add_plugins(app: &mut App) {
 
 /// Instantiate the UI components in the scene
 fn setup_ui(mut commands: Commands, login_state: Res<crate::engine::input::InputState>) {
-    commands.spawn(Camera2d);
-
     let font = |size: f32| TextFont {
         font_size: FontSize::Px(size),
         ..default()

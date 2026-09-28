@@ -49,18 +49,11 @@ pub fn add_plugins(app: &mut App, socket: std::os::unix::net::UnixStream) {
         receiver: engine_receiver,
     });
 
-    app.add_systems(Startup, start_pam_session);
     app.add_systems(Update, handle_greetd_response);
+    app.add_systems(OnEnter(crate::engine::state::GreeterState::Init), start_pam_session);
     app.add_systems(OnEnter(crate::engine::state::GreeterState::Windup), send_greetd_response);
-    app.add_systems(OnEnter(crate::engine::state::GreeterState::FinisherDone), start_session);
-}
-
-/// System to start the pam session in the engine setup
-fn start_pam_session(channel: NonSend<GreetdChannel>, input_state: Res<crate::engine::input::InputState>) {
-    let request = greetd_ipc::Request::CreateSession {
-        username: input_state.user.clone(),
-    };
-    log_err(channel.sender.send(request));
+    app.add_systems(OnEnter(crate::engine::state::GreeterState::FinisherDone), start_user_session);
+    app.add_systems(OnEnter(crate::engine::state::GreeterState::Countered), restart_greetd_session);
 }
 
 /// System to handle responses from the greetd socket
@@ -73,7 +66,7 @@ fn handle_greetd_response(
     match channel.receiver.try_recv() {
         Err(std::sync::mpsc::TryRecvError::Empty) => return,
         Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-            tracing::error!("SockThread -> Engine channel closed, can't receive responses !")
+            tracing::error!("SockThread -> Engine channel closed, can't receive responses!")
         }
         Ok(greetd_ipc::Response::AuthMessage {
             auth_message_type,
@@ -100,28 +93,27 @@ fn handle_greetd_response(
             };
             input_state.response_buffer.clear();
             input_label.0 = auth_message;
-            /* Tell the state manager to go back to combat */
-            commands.trigger(crate::engine::state::GreeterTransition::BackToCombat);
+            /* Tell the state manager to go to combat */
+            commands.trigger(crate::engine::state::GreeterTransition::GreetdAskedQuestion);
         }
-        Ok(greetd_ipc::Response::Error { error_type, description }) => match error_type {
-            greetd_ipc::ErrorType::AuthError => {
-                input_state.response_buffer.clear();
-                input_label.0 = format!("Invalid credentials!");
-                /* Restart the session */
-                let username = input_state.user.clone();
-                let request = greetd_ipc::Request::CreateSession { username };
-                log_err(channel.sender.send(request));
+        Ok(greetd_ipc::Response::Error { error_type, description }) => {
+            match error_type {
+                greetd_ipc::ErrorType::AuthError => input_label.0 = "Invalid credentials!".into(),
+                greetd_ipc::ErrorType::Error => tracing::warn!("Error from greetd: {description}"),
             }
-            greetd_ipc::ErrorType::Error => {
-                tracing::warn!("Error from greetd: {description}");
-                /* Restart the session */
-                let username = input_state.user.clone();
-                let request = greetd_ipc::Request::CreateSession { username };
-                log_err(channel.sender.send(request));
-            }
-        },
-        Ok(greetd_ipc::Response::Success) => commands.trigger(crate::engine::state::GreeterTransition::LoginSuccess),
+            input_state.response_buffer.clear();
+            commands.trigger(crate::engine::state::GreeterTransition::LoginFailure);
+        }
+        Ok(greetd_ipc::Response::Success) => commands.trigger(crate::engine::state::GreeterTransition::GreetdOk),
     }
+}
+
+/// System to start the pam session in the engine setup
+fn start_pam_session(channel: NonSend<GreetdChannel>, input_state: Res<crate::engine::input::InputState>) {
+    let username = input_state.user.clone();
+    let request = greetd_ipc::Request::CreateSession { username };
+
+    log_err(channel.sender.send(request));
 }
 
 /// Listen for when we enter the windup state to send the answer to greetd
@@ -131,23 +123,24 @@ fn send_greetd_response(channel: NonSend<GreetdChannel>, input_state: Res<crate:
     let response = Some(input_state.response_buffer.clone());
     let request = greetd_ipc::Request::PostAuthMessageResponse { response };
 
-    match channel.sender.send(request) {
-        Ok(_) => { /* All good */ }
-        Err(_) => tracing::error!("Engine -> SockThread channel closed, can't send requests !"),
-    }
+    log_err(channel.sender.send(request));
 }
 
 /// Listen for when we enter the end state (FinisherDone) to launch the session
-fn start_session(channel: NonSend<GreetdChannel>, input_state: Res<crate::engine::input::InputState>) {
+fn start_user_session(channel: NonSend<GreetdChannel>, input_state: Res<crate::engine::input::InputState>) {
     let request = greetd_ipc::Request::StartSession {
         cmd: input_state.command.clone(),
         env: Vec::new(),
     };
 
-    match channel.sender.send(request) {
-        Ok(_) => { /* All good */ }
-        Err(_) => tracing::error!("Engine -> SockThread channel closed, can't send requests !"),
-    }
+    log_err(channel.sender.send(request));
+}
+
+/// Listen for when we enter the countered state (Countered) to restart the greetd session
+fn restart_greetd_session(channel: NonSend<GreetdChannel>) {
+    let request = greetd_ipc::Request::CancelSession {};
+
+    log_err(channel.sender.send(request));
 }
 
 /// Small utility to log errors from sending

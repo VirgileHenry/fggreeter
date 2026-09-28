@@ -1,4 +1,6 @@
 mod animation;
+mod background;
+mod camera;
 mod greetd;
 mod input;
 mod state;
@@ -23,6 +25,8 @@ pub fn create(args: crate::args::Args, socket: std::os::unix::net::UnixStream) -
     );
 
     animation::add_plugins(&mut app);
+    background::add_plugins(&mut app);
+    camera::add_plugins(&mut app);
     greetd::add_plugins(&mut app, socket);
     input::add_plugins(&mut app, args);
     state::add_plugins(&mut app);

@@ -2,9 +2,15 @@ mod args;
 mod engine;
 
 fn main() {
+    #[cfg(debug_assertions)]
+    let fggreeter_log_level = "debug";
+    #[cfg(not(debug_assertions))]
+    let fggreeter_log_level = "info";
+    let bevy_log_filters = bevy::log::DEFAULT_FILTER;
     /* Initialize a global tracing subscriber based on the RUST_LOG env var */
+    let filter = format!("info,fggreeter={fggreeter_log_level},{bevy_log_filters}");
     tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::new("info"))
+        .with_env_filter(tracing_subscriber::EnvFilter::new(filter))
         .init();
 
     let args: args::Args = argh::from_env();
