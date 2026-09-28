@@ -106,19 +106,18 @@ fn handle_greetd_response(
         Ok(greetd_ipc::Response::Error { error_type, description }) => match error_type {
             greetd_ipc::ErrorType::AuthError => {
                 input_state.response_buffer.clear();
-                input_label.0 = format!("Invalid credentials !");
+                input_label.0 = format!("Invalid credentials!");
                 /* Restart the session */
-                let request = greetd_ipc::Request::CreateSession {
-                    username: input_state.user.clone(),
-                };
+                let username = input_state.user.clone();
+                let request = greetd_ipc::Request::CreateSession { username };
                 log_err(channel.sender.send(request));
             }
             greetd_ipc::ErrorType::Error => {
                 tracing::warn!("Error from greetd: {description}");
-                /* Send a non response to keep the convo with greetd going */
-                let request = greetd_ipc::Request::PostAuthMessageResponse { response: None };
+                /* Restart the session */
+                let username = input_state.user.clone();
+                let request = greetd_ipc::Request::CreateSession { username };
                 log_err(channel.sender.send(request));
-                return; /* Don't do the input cleanup + transition */
             }
         },
         Ok(greetd_ipc::Response::Success) => commands.trigger(crate::engine::state::GreeterTransition::LoginSuccess),
