@@ -12,6 +12,9 @@ pub struct InputState {
     pub show_response: bool,
 }
 
+#[derive(Event)]
+pub struct SubmitInputEvent;
+
 /// Register the plugins for the input handling
 pub fn add_plugins(app: &mut App, args: crate::args::Args) {
     app.insert_resource(InputState {
@@ -41,7 +44,7 @@ fn handle_keystrokes(
                 commands.trigger(crate::engine::animation::AnimationEvent::Reset);
             }
             Key::Enter => {
-                commands.trigger(crate::engine::state::GreeterTransition::SubmitAnswer);
+                commands.trigger(SubmitInputEvent);
                 commands.trigger(crate::engine::animation::AnimationEvent::Windup);
             }
             _ => {
