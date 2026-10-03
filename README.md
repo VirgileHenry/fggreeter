@@ -137,7 +137,4 @@ I'm using NixOS, and I have no clue on how to set up a custom greeter for other 
 
 ### License
 
-The code is licensed under the [GNU GPL v3.0 or later](LICENSE).
-
-The art (fighter models, animations and their `.blend` sources in `assets/` and `art/`)
-is licensed under [CC BY-SA 4.0](LICENSE-ASSETS), © <your name>.
+The code is licensed under the [Apache 2.0 license](LICENSE).
