@@ -9,6 +9,9 @@ Otherwise, you will be countered and a new round starts !
 
 To use this greeter, [see the installation guide](#install)
 
+You can also quickly try it out with a fake greeter with the `test-greeter.sh` script,
+that requires to compile the fakegreet package from [greetd](https://github.com/kennylevinsen/greetd) 
+
 ![fggreeter login screen](docs/screenshot.png)
 
 ### Status
