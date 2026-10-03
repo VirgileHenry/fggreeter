@@ -180,7 +180,7 @@ fn spawn_fighters(fighters_gltf: &Gltf, animator: &FightAnimator, commands: &mut
 /// Observer to update the fight animation based on the emitted animation events
 fn handle_animation_event(
     event: On<AnimationEvent>,
-    mut animator: ResMut<FightAnimator>,
+    mut animator: If<ResMut<FightAnimator>>,
     mut fight: Single<(&mut AnimationPlayer, &mut AnimationTransitions)>,
 ) {
     let (animation_player, animation_transition) = &mut *fight;
@@ -215,7 +215,7 @@ fn hit(animator: &mut FightAnimator, animation_player: &mut AnimationPlayer, ani
 }
 
 /// Observer to handle animation events to get the state back to distant
-fn on_back_to_distance(event: On<BackToDistance>, rig: Single<&AnimationTransitions>, mut animator: ResMut<FightAnimator>) {
+fn on_back_to_distance(event: On<BackToDistance>, rig: Single<&AnimationTransitions>, mut animator: If<ResMut<FightAnimator>>) {
     if rig.get_main_animation() == Some(event.node) {
         animator.fighting_state = FightingState::Distant;
     }

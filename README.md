@@ -19,6 +19,11 @@ The state machine sends animations events that are then used to run the animatio
 I am no artist, and both the background and my animations are terrible.
 I'd like to make them way better, and any help is appreciated !
 
+This greeter is currently using bevy, and while it's fine for a quick result, I'd like to migrate away from it.
+The issue is that Bevy has a tendency to panic, and we can't let a greeter panic when something is wrong.
+I would like a more robust solution, and since the visual part is super simple anyway (only one object),
+I'd like to move to a simpler way of rendering / animating the scene.
+
 ### Contributing 
 
 Anyone is welcome to help, for the code or art. 
