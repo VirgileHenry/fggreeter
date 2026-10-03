@@ -1,3 +1,4 @@
+use crate::engine::greetd::GreeterState;
 use bevy::ecs::message::MessageReader;
 use bevy::input::ButtonState;
 use bevy::input::keyboard::Key;
@@ -24,7 +25,7 @@ pub fn add_plugins(app: &mut App, args: crate::args::Args) {
         show_response: true,
     });
 
-    app.add_systems(Update, handle_keystrokes);
+    app.add_systems(Update, handle_keystrokes.run_if(in_state(GreeterState::Input)));
 }
 
 /// Read the user input and update the input field accordingly

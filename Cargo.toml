@@ -2,11 +2,13 @@
 name = "fggreeter"
 version = "0.1.0"
 edition = "2024"
+license = "GPL-3.0-or-later"
 
 [dependencies]
 argh = "0.1.19"
-bevy = { version = "0.19.1", default-features = false, features = ["2d", "ui"] }
+bevy = { version = "0.19.1", default-features = false, features = ["3d", "ui"] }
 greetd_ipc = { version = "0.10.3", features = ["sync-codec"] }
+rand = "0.10.3"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 

@@ -56,8 +56,8 @@ impl std::fmt::Display for GreeterState {
 /// System param to get both the greeter state and next state.
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct StateParam<'w> {
-    state: Res<'w, State<GreeterState>>,
-    next_state: ResMut<'w, NextState<GreeterState>>,
+    pub state: Res<'w, State<GreeterState>>,
+    pub next_state: ResMut<'w, NextState<GreeterState>>,
 }
 
 /// Resource that holds the channel to the thread handling the greeter socket and com.
