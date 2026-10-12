@@ -107,9 +107,44 @@ in
 
 Since this uses bevy for now, it might take a few minutes to build.
 
-#### Not NixOS
+#### Arch Linux
 
-I'm using NixOS, and I have no clue on how to set up a custom greeter for other distros. Dig it up !
+A PKGBUILD is provided in `packaging/arch`. It builds the greeter, installs the assets
+in `/usr/share/fggreeter/assets` and creates the `/var/log/fggreeter` log folder:
+
+```sh
+git clone https://github.com/customroaming/fggreeter
+cd fggreeter/packaging/arch
+makepkg -si
+```
+
+Then point greetd to it in `/etc/greetd/config.toml` (keep a copy of your current config around !):
+
+```toml
+[terminal]
+vt = 1
+
+[default_session]
+command = "env XKB_DEFAULT_LAYOUT=us cage -s -m last -- fggreeter --user <user> --command start-hyprland --log-file /var/log/fggreeter/fggreeter.log"
+user = "greeter"
+```
+
+And enable greetd if it is not your display manager yet, with `systemctl enable greetd`.
+
+A few notes:
+
+- `--user` is the user that will log in, the greeter only asks for the password.
+- If your session command has arguments, repeat the option: `--command sway --command --unsupported-gpu`.
+- `XKB_DEFAULT_LAYOUT` sets the keyboard layout used to type the password.
+- On laptops with two GPUs, the discrete one is used by default. Add `WGPU_POWER_PREF=low` in the `env` part to use the integrated one.
+- If the greeter does not start, switch to another TTY (Ctrl+Alt+F2), restore your previous config
+  and have a look at `/var/log/fggreeter/fggreeter.log`.
+
+#### Other distros
+
+Install `greetd`, `cage` and a Vulkan driver, build with `cargo build --release`, and copy the `assets` folder
+to `/usr/share/fggreeter/assets`. If you want the assets somewhere else, set `BEVY_ASSET_ROOT`
+to the folder that contains the `assets` folder. The greetd config is the same as for Arch.
 
 ### License
 

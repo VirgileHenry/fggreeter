@@ -1,0 +1,9 @@
+# Example /etc/greetd/config.toml for fggreeter.
+# Replace <user> with your login name and start-hyprland with your session command.
+
+[terminal]
+vt = 1
+
+[default_session]
+command = "env XKB_DEFAULT_LAYOUT=us cage -s -m last -- fggreeter --user <user> --command start-hyprland --log-file /var/log/fggreeter/fggreeter.log"
+user = "greeter"

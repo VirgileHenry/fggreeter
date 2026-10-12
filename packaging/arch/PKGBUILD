@@ -1,0 +1,65 @@
+# Maintainer: Your Name <you@example.com>
+
+pkgname=fggreeter-git
+_pkgname=fggreeter
+pkgver=0.1.0.r0.g0000000
+pkgrel=1
+pkgdesc="Fighting game greeter for greetd"
+arch=('x86_64' 'aarch64')
+url="https://github.com/customroaming/fggreeter"
+license=('Apache-2.0')
+depends=(
+  'cage'
+  'glibc'
+  'greetd'
+  'libgcc'
+  'libxkbcommon'
+  'systemd-libs'
+  'vulkan-icd-loader'
+  'wayland'
+)
+makedepends=('cargo' 'git' 'pkgconf')
+optdepends=(
+  'vulkan-intel: Vulkan driver for Intel GPUs'
+  'vulkan-radeon: Vulkan driver for AMD GPUs'
+  'nvidia-utils: Vulkan driver for NVIDIA GPUs'
+)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+options=('!lto')
+source=("$_pkgname::git+$url.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$_pkgname"
+  local version
+  version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
+  printf "%s.r%s.g%s" "$version" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+prepare() {
+  cd "$_pkgname"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc --print host-tuple)"
+}
+
+build() {
+  cd "$_pkgname"
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  cargo build --frozen --release
+}
+
+package() {
+  cd "$_pkgname"
+  install -Dm755 "target/release/$_pkgname" "$pkgdir/usr/bin/$_pkgname"
+
+  # The greeter falls back to this folder when BEVY_ASSET_ROOT is not set
+  install -Dm644 -t "$pkgdir/usr/share/$_pkgname/assets/images" assets/images/*.png
+  install -Dm644 -t "$pkgdir/usr/share/$_pkgname/assets/models" assets/models/*.glb
+
+  install -Dm644 packaging/arch/fggreeter.tmpfiles "$pkgdir/usr/lib/tmpfiles.d/$_pkgname.conf"
+  install -Dm644 packaging/arch/config.toml.example "$pkgdir/usr/share/doc/$_pkgname/config.toml.example"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$_pkgname/README.md"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$_pkgname/LICENSE"
+}

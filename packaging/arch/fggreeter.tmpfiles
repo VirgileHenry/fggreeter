@@ -1,0 +1,2 @@
+# Log folder for the greeter, see the --log-file option
+d /var/log/fggreeter 0755 greeter greeter -
